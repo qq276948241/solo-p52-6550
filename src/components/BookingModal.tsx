@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { X, Minus, Plus, ShoppingCart, CheckCircle2 } from "lucide-react";
 import type { Service } from "@/data/services";
 import {
@@ -22,6 +22,13 @@ export default function BookingModal({ service, onClose }: BookingModalProps) {
   );
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
+
+  useEffect(() => {
+    if (service) {
+      setSelected(getDefaultOptions());
+      setQuantity(1);
+    }
+  }, [service]);
 
   const finalPrice = useMemo(() => {
     if (!service) return 0;
