@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { Scissors, PawPrint } from "lucide-react";
-import { SERVICES } from "@/data/services";
+import { SERVICES, type Service } from "@/data/services";
 import ServiceCard from "@/components/ServiceCard";
+import BookingModal from "@/components/BookingModal";
 
 export default function HomePage() {
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="relative h-64 overflow-hidden">
@@ -40,18 +44,22 @@ export default function HomePage() {
             </div>
           </div>
           <span className="bg-primary text-white text-xs px-3 py-1.5 rounded-full font-medium">
-            立即预约
+            立即选购
           </span>
         </div>
 
         <div className="mb-4 flex items-end justify-between">
           <h2 className="text-lg font-bold text-text">服务项目</h2>
-          <span className="text-xs text-text-light">点击卡片预约</span>
+          <span className="text-xs text-text-light">点击卡片选规格</span>
         </div>
 
         <div className="space-y-4">
           {SERVICES.map((service) => (
-            <ServiceCard key={service.id} service={service} />
+            <ServiceCard
+              key={service.id}
+              service={service}
+              onClick={() => setSelectedService(service)}
+            />
           ))}
         </div>
 
@@ -61,6 +69,11 @@ export default function HomePage() {
           </p>
         </div>
       </div>
+
+      <BookingModal
+        service={selectedService}
+        onClose={() => setSelectedService(null)}
+      />
     </div>
   );
 }

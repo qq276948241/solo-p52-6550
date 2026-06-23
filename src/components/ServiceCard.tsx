@@ -1,17 +1,15 @@
-import { useNavigate } from "react-router-dom";
-import { Clock } from "lucide-react";
+import { Clock, ShoppingCart } from "lucide-react";
 import type { Service } from "@/data/services";
 
 interface ServiceCardProps {
   service: Service;
+  onClick: () => void;
 }
 
-export default function ServiceCard({ service }: ServiceCardProps) {
-  const navigate = useNavigate();
-
+export default function ServiceCard({ service, onClick }: ServiceCardProps) {
   return (
     <div
-      onClick={() => navigate(`/booking/${service.id}`)}
+      onClick={onClick}
       className="card-base hover:shadow-card-hover cursor-pointer p-5 flex items-center gap-4 active:scale-[0.98]"
     >
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center text-4xl shrink-0">
@@ -27,9 +25,12 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           <span>约 {service.duration} 分钟</span>
         </div>
       </div>
-      <div className="text-right shrink-0">
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
         <span className="text-primary text-2xl font-bold">¥{service.price}</span>
-        <div className="text-xs text-text-light mt-0.5">起</div>
+        <div className="flex items-center gap-1 bg-primary/10 text-primary text-xs px-2.5 py-1 rounded-full font-medium">
+          <ShoppingCart size={12} />
+          <span>选规格</span>
+        </div>
       </div>
     </div>
   );
