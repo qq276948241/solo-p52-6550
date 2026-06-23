@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { PetType } from "@/data/services";
+import type { SelectedOptions } from "@/data/drinkOptions";
+import { DRINK_OPTION_GROUPS, getOptionLabel, getTotalPriceDelta } from "@/data/drinkOptions";
 
 export interface Booking {
   id: string;
@@ -14,42 +16,18 @@ export interface Booking {
   createdAt: number;
 }
 
-export type CupSize = "medium" | "large" | "xlarge";
-export type SugarLevel = "none" | "less" | "half" | "normal" | "extra";
-
 export interface CartItem {
   id: string;
   serviceId: string;
   serviceName: string;
   serviceIcon: string;
   price: number;
-  cupSize: CupSize;
-  sugarLevel: SugarLevel;
+  options: SelectedOptions;
   quantity: number;
   addedAt: number;
 }
 
-export const CUP_SIZES: { value: CupSize; label: string; priceDelta: number }[] = [
-  { value: "medium", label: "中杯", priceDelta: 0 },
-  { value: "large", label: "大杯", priceDelta: 3 },
-  { value: "xlarge", label: "超大杯", priceDelta: 6 },
-];
-
-export const SUGAR_LEVELS: { value: SugarLevel; label: string }[] = [
-  { value: "none", label: "无糖" },
-  { value: "less", label: "少糖" },
-  { value: "half", label: "半糖" },
-  { value: "normal", label: "标准糖" },
-  { value: "extra", label: "多糖" },
-];
-
-export function getCupSizeLabel(size: CupSize): string {
-  return CUP_SIZES.find((c) => c.value === size)?.label ?? "中杯";
-}
-
-export function getSugarLevelLabel(level: SugarLevel): string {
-  return SUGAR_LEVELS.find((s) => s.value === level)?.label ?? "标准糖";
-}
+export { DRINK_OPTION_GROUPS, getOptionLabel, getTotalPriceDelta };
 
 function generateCartId(): string {
   return "CT" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000).toString().padStart(3, "0");
@@ -65,6 +43,12 @@ interface BookingState {
   ) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
+}
+
+function optionsEqual(a: SelectedOptions, b: SelectedOptions): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((k) => a[k] === b[k]);
 }
 
 function generateId(): string {
@@ -98,8 +82,7 @@ export const useBookingStore = create<BookingState>()(
         const existingIdx = cart.findIndex(
           (c) =>
             c.serviceId === item.serviceId &&
-            c.cupSize === item.cupSize &&
-            c.sugarLevel === item.sugarLevel
+            optionsEqual(c.options, item.options)
         );
         if (existingIdx >= 0) {
           const newCart = [...cart];

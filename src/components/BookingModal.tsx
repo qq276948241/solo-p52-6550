@@ -2,11 +2,11 @@ import { useState, useMemo } from "react";
 import { X, Minus, Plus, ShoppingCart, CheckCircle2 } from "lucide-react";
 import type { Service } from "@/data/services";
 import {
-  CUP_SIZES,
-  SUGAR_LEVELS,
-  type CupSize,
-  type SugarLevel,
-} from "@/store/useBookingStore";
+  DRINK_OPTION_GROUPS,
+  type SelectedOptions,
+  getDefaultOptions,
+  getTotalPriceDelta,
+} from "@/data/drinkOptions";
 import { useBookingStore } from "@/store/useBookingStore";
 
 interface BookingModalProps {
@@ -17,27 +17,31 @@ interface BookingModalProps {
 export default function BookingModal({ service, onClose }: BookingModalProps) {
   const addToCart = useBookingStore((s) => s.addToCart);
 
-  const [cupSize, setCupSize] = useState<CupSize>("medium");
-  const [sugarLevel, setSugarLevel] = useState<SugarLevel>("normal");
+  const [selected, setSelected] = useState<SelectedOptions>(() =>
+    getDefaultOptions()
+  );
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
 
   const finalPrice = useMemo(() => {
     if (!service) return 0;
-    const delta = CUP_SIZES.find((c) => c.value === cupSize)?.priceDelta ?? 0;
+    const delta = getTotalPriceDelta(selected);
     return (service.price + delta) * quantity;
-  }, [service, cupSize, quantity]);
+  }, [service, selected, quantity]);
+
+  function handleChange(groupKey: string, value: string) {
+    setSelected((prev) => ({ ...prev, [groupKey]: value }));
+  }
 
   function handleAddToCart() {
     if (!service) return;
-    const priceDelta = CUP_SIZES.find((c) => c.value === cupSize)?.priceDelta ?? 0;
+    const basePrice = service.price + getTotalPriceDelta(selected);
     addToCart({
       serviceId: service.id,
       serviceName: service.name,
       serviceIcon: service.icon,
-      price: service.price + priceDelta,
-      cupSize,
-      sugarLevel,
+      price: basePrice,
+      options: { ...selected },
       quantity,
     });
     setAddedToast(true);
@@ -99,69 +103,84 @@ export default function BookingModal({ service, onClose }: BookingModalProps) {
             </div>
           </div>
 
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-text flex items-center gap-1.5">
-                <span className="w-1 h-4 rounded-full bg-primary" />
-                杯型
-              </h3>
-              <span className="text-xs text-text-light">选大杯更划算</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2.5">
-              {CUP_SIZES.map((size) => {
-                const active = cupSize === size.value;
-                return (
-                  <button
-                    key={size.value}
-                    onClick={() => setCupSize(size.value)}
-                    className={`py-3 rounded-xl text-sm font-medium transition-all duration-200 border-2 ${
-                      active
-                        ? "border-primary bg-primary/5 text-primary shadow-sm"
-                        : "border-transparent bg-muted/60 text-text hover:bg-muted"
-                    }`}
-                  >
-                    <div>{size.label}</div>
-                    {size.priceDelta > 0 && (
-                      <div
-                        className={`text-[11px] mt-0.5 ${
-                          active ? "text-primary" : "text-text-light"
+          {DRINK_OPTION_GROUPS.map((group) => (
+            <div key={group.key} className="mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-text flex items-center gap-1.5">
+                  <span className="w-1 h-4 rounded-full bg-primary" />
+                  {group.title}
+                </h3>
+                {group.subtitle && (
+                  <span className="text-xs text-text-light">{group.subtitle}</span>
+                )}
+              </div>
+
+              {group.mode === "grid" ? (
+                <div
+                  className="grid gap-2.5"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.min(group.options.length, 3)}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {group.options.map((opt) => {
+                    const active = selected[group.key] === opt.value;
+                    const delta = opt.priceDelta ?? 0;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => handleChange(group.key, opt.value)}
+                        className={`py-3 rounded-xl text-sm font-medium transition-all duration-200 border-2 ${
+                          active
+                            ? "border-primary bg-primary/5 text-primary shadow-sm"
+                            : "border-transparent bg-muted/60 text-text hover:bg-muted"
                         }`}
                       >
-                        +¥{size.priceDelta}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+                        <div>{opt.label}</div>
+                        {delta > 0 && (
+                          <div
+                            className={`text-[11px] mt-0.5 ${
+                              active ? "text-primary" : "text-text-light"
+                            }`}
+                          >
+                            +¥{delta}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-1">
+                  {group.options.map((opt) => {
+                    const active = selected[group.key] === opt.value;
+                    const delta = opt.priceDelta ?? 0;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => handleChange(group.key, opt.value)}
+                        className={`shrink-0 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                          active
+                            ? "bg-primary text-white shadow-md shadow-primary/30"
+                            : "bg-muted/60 text-text hover:bg-muted"
+                        }`}
+                      >
+                        {opt.label}
+                        {delta > 0 && (
+                          <span
+                            className={`ml-1 text-[11px] ${
+                              active ? "text-white/90" : "text-text-light"
+                            }`}
+                          >
+                            +¥{delta}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-text flex items-center gap-1.5">
-                <span className="w-1 h-4 rounded-full bg-primary" />
-                糖度
-              </h3>
-            </div>
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-1">
-              {SUGAR_LEVELS.map((level) => {
-                const active = sugarLevel === level.value;
-                return (
-                  <button
-                    key={level.value}
-                    onClick={() => setSugarLevel(level.value)}
-                    className={`shrink-0 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                      active
-                        ? "bg-primary text-white shadow-md shadow-primary/30"
-                        : "bg-muted/60 text-text hover:bg-muted"
-                    }`}
-                  >
-                    {level.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          ))}
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
